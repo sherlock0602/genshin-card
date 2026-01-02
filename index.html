@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>原神風格音律卡片 - 可調字體版</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <title>原神風格音律卡片 - 鋼琴演奏版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            /* 原神 UI 配色盤 */
             --genshin-bg: #1c2541;       
             --genshin-card-bg: #f4f3ea;  
             --genshin-gold: #d4a024;     
@@ -56,104 +54,79 @@
         #genshin-card::before { top: 10px; left: 10px; border-right: none; border-bottom: none; }
         #genshin-card::after { bottom: 10px; right: 10px; border-left: none; border-top: none; }
 
-        /* === 圖片樣式 === */
         .chibi-char {
-            position: absolute;
-            width: 120px; height: auto;
-            z-index: 5; opacity: 0.9;
-            pointer-events: none;
+            position: absolute; width: 120px; height: auto;
+            z-index: 5; opacity: 0.9; pointer-events: none;
             filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
         }
         .char-left { bottom: 15px; left: 15px; transform: rotate(-5deg); }
         .char-right { bottom: 15px; right: 15px; transform: rotate(5deg); }
 
         #editor {
-            flex-grow: 1;
-            /* 預設字體大小，會被 JS 覆蓋 */
-            font-size: 26px; 
-            line-height: 1.6; 
-            color: var(--text-color);
-            outline: none; white-space: pre-wrap; overflow-y: auto;
-            border: none; background: transparent; resize: none;
-            text-align: left; 
-            z-index: 10; position: relative;
-            font-weight: bold;
+            flex-grow: 1; font-size: 26px; line-height: 1.6; 
+            color: var(--text-color); outline: none; white-space: pre-wrap; overflow-y: auto;
+            border: none; background: transparent; resize: none; text-align: left; 
+            z-index: 10; position: relative; font-weight: bold;
         }
-        
         #editor::-webkit-scrollbar { width: 6px; }
         #editor::-webkit-scrollbar-thumb { background: var(--genshin-gold); border-radius: 10px; }
-        #editor:empty::before { content: "在此寫下你的冒險詩篇..."; color: #a8978a; }
+        #editor:empty::before { content: " 旅行者的演奏筆記"; color: #a8978a; }
 
-        /* === 控制區 (滑桿 + 按鈕) === */
-        #controls-container {
-            display: flex; flex-direction: column; align-items: center; gap: 15px;
-            width: 100%;
+        /* === 特效畫布 (覆蓋在卡片上) === */
+        #effect-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 20;
         }
 
-        /* === 字體調整滑桿 === */
+        /* === 控制區 === */
+        #controls-container {
+            display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%;
+        }
         .slider-group {
             display: flex; align-items: center; gap: 15px;
             background: rgba(28, 37, 65, 0.8);
             padding: 8px 20px; border-radius: 30px;
             border: 1px solid var(--genshin-gold);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        .slider-label { font-size: 14px; color: var(--genshin-gold-light); font-weight: bold; letter-spacing: 1px; }
-        
-        /* 自訂滑桿樣式 */
+        .slider-label { font-size: 14px; color: var(--genshin-gold-light); font-weight: bold; }
         input[type=range] {
             -webkit-appearance: none; width: 150px; height: 6px;
-            background: #2d3e5e; border-radius: 5px; outline: none;
-            border: 1px solid #5b77af;
+            background: #2d3e5e; border-radius: 5px; outline: none; border: 1px solid #5b77af;
         }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 18px; height: 18px; border-radius: 50%;
-            background: var(--genshin-gold);
-            cursor: pointer;
-            box-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
-            border: 2px solid #fff;
-        }
-        input[type=range]::-moz-range-thumb {
-            width: 18px; height: 18px; border-radius: 50%;
-            background: var(--genshin-gold);
-            cursor: pointer; border: 2px solid #fff;
+            -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+            background: var(--genshin-gold); cursor: pointer; border: 2px solid #fff;
         }
 
-        /* === 按鈕區 === */
         #controls { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
         button {
             background: linear-gradient(to bottom, #4a6291, #2d3e5e);
-            color: var(--genshin-gold-light);
-            border: 2px solid var(--genshin-gold);
+            color: var(--genshin-gold-light); border: 2px solid var(--genshin-gold);
             padding: 12px 35px; font-size: 18px; font-family: inherit; cursor: pointer;
             border-radius: 50px; transition: all 0.2s; outline: none; white-space: nowrap; 
             letter-spacing: 1px; font-weight: bold;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.2);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
         button:hover { 
             background: linear-gradient(to bottom, #5b77af, #395385); color: white;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4); transform: translateY(-2px);
             border-color: var(--genshin-gold-light);
         }
-        button:active { transform: translateY(0px); }
         button:disabled { background: #333; color: #777; border-color: #555; cursor: default; transform: none; box-shadow: none;}
         .btn-record { background: linear-gradient(to bottom, #cc3c31, #8a251e); border-color: #ffbba6;}
         .btn-record:hover { background: linear-gradient(to bottom, #e64b3e, #a83229); }
         
-        /* === 覆蓋層 === */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(28, 37, 65, 0.95); z-index: 100; 
             display: none; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; padding: 20px; box-sizing: border-box; color: var(--genshin-gold-light);
+            text-align: center; color: var(--genshin-gold-light);
         }
-        .overlay h2 { color: var(--genshin-gold); margin-bottom: 30px; font-weight: bold; font-size: 28px; text-shadow: 0 2px 5px black;}
+        .overlay h2 { color: var(--genshin-gold); margin-bottom: 30px; font-size: 28px; }
         .close-btn { margin-top: 30px; border-color: var(--genshin-gold); color: var(--genshin-gold); background: transparent;}
         .close-btn:hover { background: var(--genshin-gold); color: #1c2541; }
         #qrcode-display { padding: 20px; background: var(--genshin-card-bg); border-radius: 15px; border: 4px solid var(--genshin-gold); }
-
+        
         #receiver-overlay .open-letter-btn {
             font-size: 24px; padding: 18px 50px; animation: magic-pulse 2s infinite;
         }
@@ -162,6 +135,8 @@
             70% { box-shadow: 0 0 0 25px rgba(212, 160, 36, 0); }
             100% { box-shadow: 0 0 0 0 rgba(212, 160, 36, 0); }
         }
+
+        /* 隱藏的 Canvas */
         #postcard-canvas { position: absolute; top: -9999px; left: -9999px; }
     </style>
 </head>
@@ -171,8 +146,9 @@
         <div id="genshin-card">
             <img src="paimon.png" id="img-paimon" class="chibi-char char-left" alt="paimon">
             <img src="traveler.png" id="img-traveler" class="chibi-char char-right" alt="traveler">
-
+            
             <div id="editor" contenteditable="true"></div>
+            <canvas id="effect-overlay"></canvas>
         </div>
 
         <div id="controls-container">
@@ -181,7 +157,6 @@
                 <input type="range" id="font-size-slider" min="16" max="50" value="26">
                 <span class="slider-label" style="font-size: 18px;">A+</span>
             </div>
-
             <div id="controls">
                 <button id="play-btn">▶ 聆聽</button>
                 <button id="record-btn" class="btn-record">🔴 錄製紀錄</button>
@@ -196,7 +171,6 @@
         <p style="color: #a8978a; margin-top: 20px; font-size: 16px;">(手機掃描後會開啟原神風格卡片)</p>
         <button class="close-btn" onclick="closeOverlay('share-overlay')">關閉</button>
     </div>
-
     <div id="receiver-overlay" class="overlay">
         <h2>收到一份「提瓦特的信件」</h2>
         <p style="color:#a8978a; margin-bottom: 30px; font-size: 18px;">請打開聲音，點擊開啟</p>
@@ -206,60 +180,156 @@
     <canvas id="postcard-canvas" width="1200" height="800"></canvas>
 
     <script>
-        // 音效
+        // ==========================================
+        // 1. 鋼琴音調映射系統 (固定音高)
+        // ==========================================
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext();
         const dest = audioCtx.createMediaStreamDestination();
-        const notes = [196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
-        
-        function playSound(char) {
+
+        // 頻率表 (C3 到 C6)
+        const freqs = {
+            'z': 130.81, 'x': 146.83, 'c': 164.81, 'v': 174.61, 'b': 196.00, 'n': 220.00, 'm': 246.94, // 低音 (Z-M)
+            'a': 261.63, 's': 293.66, 'd': 329.63, 'f': 349.23, 'g': 392.00, 'h': 440.00, 'j': 493.88, 'k': 523.25, 'l': 587.33, // 中音 (A-L)
+            'q': 523.25, 'w': 587.33, 'e': 659.25, 'r': 698.46, 't': 783.99, 'y': 880.00, 'u': 987.77, 'i': 1046.50, 'o': 1174.66, 'p': 1318.51, // 高音 (Q-P)
+            '1': 1046.50, '2': 1174.66, '3': 1318.51, '4': 1396.91, '5': 1567.98, '6': 1760.00, '7': 1975.53, '8': 2093.00 // 超高音 (1-8)
+        };
+        // 預設音階陣列 (給找不到按鍵對應時用，或手機自動播放用)
+        const defaultNotes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
+
+        function playSound(key) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            let index = char ? (char.charCodeAt(0) % notes.length) : Math.floor(Math.random() * notes.length);
-            osc.frequency.setValueAtTime(notes[index], audioCtx.currentTime);
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain();
+            osc.type = 'sine'; // 圓潤的正弦波
+            
+            // 嘗試從映射表找，找不到就用隨機
+            let freq;
+            if (key && freqs[key.toLowerCase()]) {
+                freq = freqs[key.toLowerCase()];
+            } else if (key) {
+                // 如果輸入中文或符號，用字元碼對應到中音區
+                freq = defaultNotes[key.charCodeAt(0) % defaultNotes.length];
+            } else {
+                freq = defaultNotes[Math.floor(Math.random() * defaultNotes.length)];
+            }
+
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
             osc.connect(gain); gain.connect(audioCtx.destination); gain.connect(dest);
+            
+            // 鋼琴般的聲音包絡 (Attack 短, Decay 長)
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0);
-            osc.start(); osc.stop(audioCtx.currentTime + 1.0);
+            gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+
+            osc.start(); osc.stop(audioCtx.currentTime + 1.2);
         }
-        
-        function triggerEffect(char) {
-            playSound(char);
-            if (this.lastFire && Date.now() - this.lastFire < 80) return;
-            this.lastFire = Date.now();
-            const sel = window.getSelection();
-            if (sel.rangeCount) {
-                const rect = sel.getRangeAt(0).getBoundingClientRect();
-                if (rect && rect.left) {
-                    confetti({
-                        particleCount: 8, spread: 60, origin: { x: rect.left/window.innerWidth, y: rect.top/window.innerHeight },
-                        colors: ['#d4a024', '#75c2a8', '#cfa726', '#a757cb', '#4991e4', '#cc3c31', '#a0e3de', '#ffffff'], 
-                        shapes: ['circle', 'star'], scalar: 0.8, gravity: 0.6, ticks: 40, disableForReducedMotion: true
-                    });
-                }
+
+        // ==========================================
+        // 2. 音符粒子特效系統 (取代 confetti)
+        // ==========================================
+        const overlayCanvas = document.getElementById('effect-overlay');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        let particles = [];
+        const noteSymbols = ['♪', '♫', '♩', '♬', '♭', '♮', '♯'];
+        const colors = ['#d4a024', '#75c2a8', '#cfa726', '#a757cb', '#4991e4', '#cc3c31']; // 元素色
+
+        // 調整畫布大小以符合卡片
+        function resizeOverlay() {
+            const card = document.getElementById('genshin-card');
+            overlayCanvas.width = card.clientWidth;
+            overlayCanvas.height = card.clientHeight;
+        }
+        window.addEventListener('resize', resizeOverlay);
+        resizeOverlay();
+
+        class NoteParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.text = noteSymbols[Math.floor(Math.random() * noteSymbols.length)];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.size = 20 + Math.random() * 15;
+                this.speedY = -1.5 - Math.random() * 1.5; // 往上飄
+                this.speedX = (Math.random() - 0.5) * 2;  // 左右飄
+                this.alpha = 1;
+                this.rotation = (Math.random() - 0.5) * 0.5;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.alpha -= 0.015; // 慢慢消失
+                this.size *= 0.99;   // 慢慢變小
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.font = `bold ${this.size}px serif`;
+                ctx.fillText(this.text, 0, 0);
+                // 加一點發光效果
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                ctx.fillText(this.text, 0, 0);
+                ctx.restore();
             }
         }
 
-        // 字體控制邏輯
+        function animateParticles() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw(overlayCtx);
+                if (particles[i].alpha <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles(); // 啟動動畫迴圈
+
+        function triggerEffect(key) {
+            playSound(key);
+            // 獲取游標位置
+            const sel = window.getSelection();
+            if (sel.rangeCount) {
+                const range = sel.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                const cardRect = document.getElementById('genshin-card').getBoundingClientRect();
+                
+                // 計算相對位置 (因為 Canvas 是絕對定位在卡片上的)
+                const x = rect.left - cardRect.left; 
+                const y = rect.top - cardRect.top;
+                
+                // 產生音符
+                particles.push(new NoteParticle(x, y));
+                particles.push(new NoteParticle(x, y)); // 一次兩顆比較熱鬧
+            }
+        }
+
+        // ==========================================
+        // 3. 互動邏輯 (打字、播放、字體)
+        // ==========================================
         const editor = document.getElementById('editor');
         const fontSizeSlider = document.getElementById('font-size-slider');
-
-        // 監聽滑桿改變
+        
         fontSizeSlider.addEventListener('input', (e) => {
-            const newSize = e.target.value;
-            editor.style.fontSize = newSize + 'px';
+            editor.style.fontSize = e.target.value + 'px';
         });
 
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         let isPlaying = false;
+
         async function startAutoPlay(text, mode = 'preview') {
             if (isPlaying) return; isPlaying = true;
             const buttons = document.querySelectorAll('#controls button');
             buttons.forEach(b => b.disabled = true);
             if(mode === 'preview') document.getElementById('play-btn').innerText = "演奏中...";
             editor.innerText = ""; editor.focus(); await sleep(500);
+            
             for (let char of Array.from(text)) {
                 if (!isPlaying) break;
                 editor.innerText += char;
@@ -267,7 +337,7 @@
                 const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
                 if (char.trim()) triggerEffect(char);
                 editor.scrollTop = editor.scrollHeight;
-                let delay = ['，', '。', '！', '？', '\n', '⋯'].includes(char) ? 450 : (130 + Math.random() * 50);
+                let delay = ['，', '。', '\n'].includes(char) ? 450 : (150 + Math.random() * 50);
                 if (mode === 'recording') delay += 60;
                 await sleep(delay);
             }
@@ -277,103 +347,131 @@
             }
         }
 
+        // ==========================================
+        // 4. 錄影功能 (整合繪圖與特效)
+        // ==========================================
         const canvas = document.getElementById('postcard-canvas');
         const ctx = canvas.getContext('2d');
         const recordBtn = document.getElementById('record-btn');
+
         recordBtn.addEventListener('click', async () => {
             const text = editor.innerText.trim();
             if (!text) return alert("請先寫下你的冒險紀錄！✦");
             recordBtn.innerText = "準備錄製...";
             
-            // 抓取當前的字體大小傳給繪圖函式
             const currentFontSize = parseInt(window.getComputedStyle(editor).fontSize);
             
-            drawGenshinCard(text, currentFontSize); 
-            
-            const canvasStream = canvas.captureStream(0);
-            const track = canvasStream.getVideoTracks()[0];
-            const refresher = setInterval(() => { if(track.requestFrame) track.requestFrame(); }, 500);
+            // 錄影迴圈：持續更新畫面
+            let recording = true;
+            const canvasStream = canvas.captureStream(30); // 30 FPS
             const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+            
             let options = { mimeType: 'video/webm;codecs=vp9' };
             if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm' };
             const recorder = new MediaRecorder(combinedStream, options);
             const chunks = [];
+            
             recorder.ondataavailable = (e) => { if(e.data.size > 0) chunks.push(e.data); };
             recorder.onstop = () => {
-                clearInterval(refresher);
+                recording = false;
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'genshin-record.webm'; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = 'genshin-piano-record.webm'; a.click();
                 URL.revokeObjectURL(url);
                 recordBtn.innerText = "🔴 錄製紀錄"; editor.innerText = text;
             };
+
+            // 啟動錄影渲染迴圈
+            function renderLoop() {
+                if(!recording) return;
+                // 1. 畫背景卡片
+                drawGenshinCard(text, currentFontSize, true); 
+                // 2. 畫粒子 (從目前的 particles 陣列抓取並畫到錄影用的 canvas 上)
+                ctx.save();
+                // 需要做座標轉換，因為 particles 是相對於 card 的座標，但錄影 canvas 是 1200x800
+                // 這裡做一個簡單的比例映射
+                const scaleX = canvas.width / overlayCanvas.width;
+                const scaleY = canvas.height / overlayCanvas.height;
+                
+                particles.forEach(p => {
+                    ctx.save();
+                    // 畫在錄影 Canvas 上的位置
+                    ctx.translate(100 + p.x * (canvas.width-200)/overlayCanvas.width, 80 + p.y * (canvas.height-160)/overlayCanvas.height); 
+                    // (上面這個座標轉換是概略估算，為了讓粒子出現在卡片文字區附近)
+                    
+                    ctx.rotate(p.rotation);
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fillStyle = p.color;
+                    ctx.font = `bold ${p.size * 1.5}px serif`; // 錄影版字體大一點
+                    ctx.fillText(p.text, 0, 0);
+                    ctx.restore();
+                });
+                ctx.restore();
+                
+                requestAnimationFrame(renderLoop);
+            }
+
             recorder.start();
+            renderLoop(); // 開始渲染
+            
             recordBtn.innerText = "錄製中...請勿切換";
+            // 錄影時把 editor 清空重新打字
             await startAutoPlay(text, 'recording');
             recorder.stop();
         });
 
-        // 畫出原神風格卡片 (支援動態字體大小)
-        function drawGenshinCard(text, uiFontSize) {
+        // 繪製卡片底圖函式
+        function drawGenshinCard(fullText, uiFontSize, isRecording) {
             const w = canvas.width, h = canvas.height;
-            // 1. 背景
+            // 背景
             const grad = ctx.createLinearGradient(0, 0, w, h);
             grad.addColorStop(0, "#1c2541"); grad.addColorStop(1, "#2a3d66");
             ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
             
-            // 2. 卡片本體
+            // 卡片
             const cardX = 100, cardY = 80, cardW = w-200, cardH = h-160;
             ctx.fillStyle = "#f4f3ea";
             roundRect(ctx, cardX, cardY, cardW, cardH, 30, true, false);
             
-            // 3. 邊框
+            // 邊框
             ctx.lineWidth = 8; ctx.strokeStyle = "#395385"; 
             roundRect(ctx, cardX-4, cardY-4, cardW+8, cardH+8, 34, false, true);
             ctx.lineWidth = 5; ctx.strokeStyle = "#d4a024";
             roundRect(ctx, cardX, cardY, cardW, cardH, 30, false, true);
 
-            // 4. 文字 (左對齊，動態大小)
-            // Canvas 解析度較高，所以我們要把網頁上的字體大小放大一點點 (約 1.5 倍) 才會清晰
+            // 文字
             const canvasFontSize = uiFontSize * 1.5; 
-            const lineHeight = canvasFontSize * 1.6; // 行距
-
+            const lineHeight = canvasFontSize * 1.6;
             ctx.fillStyle = "#4a3b3b"; 
             ctx.font = `bold ${canvasFontSize}px 'Palatino Linotype', serif`; 
             ctx.textAlign = "left"; ctx.textBaseline = "top";
             
-            const lines = text.split('\n');
+            // 如果是錄影中，我們只畫出「目前編輯器顯示的文字」，而不是全文
+            // 這樣才能有打字機效果
+            const textToDraw = isRecording ? editor.innerText : fullText;
+            
+            const lines = textToDraw.split('\n');
             let y = cardY + 80;
             const startX = cardX + 80;
-            
-            // 計算每行最大字數 (大概估算，防止太寬)
             const maxCharsPerLine = Math.floor((cardW - 160) / (canvasFontSize * 0.6));
 
             lines.forEach(line => {
-                // 簡單截斷
                 let displayLine = line.length > maxCharsPerLine ? line.substring(0, maxCharsPerLine) + "..." : line;
-                ctx.fillText(displayLine, startX, y); 
-                y += lineHeight; // 動態行距
+                ctx.fillText(displayLine, startX, y); y += lineHeight;
             });
 
-            // 5. 繪製圖片
+            // 圖片
             const imgPaimon = document.getElementById('img-paimon');
             const imgTraveler = document.getElementById('img-traveler');
             if (imgPaimon && imgPaimon.complete) {
-                ctx.save();
-                ctx.translate(cardX + 80, cardY + cardH - 80); 
-                ctx.rotate(-5 * Math.PI / 180); 
-                ctx.drawImage(imgPaimon, -90, -90, 180, 180); 
-                ctx.restore();
+                ctx.save(); ctx.translate(cardX + 80, cardY + cardH - 80); ctx.rotate(-5 * Math.PI / 180); 
+                ctx.drawImage(imgPaimon, -90, -90, 180, 180); ctx.restore();
             }
             if (imgTraveler && imgTraveler.complete) {
-                ctx.save();
-                ctx.translate(cardX + cardW - 80, cardY + cardH - 80); 
-                ctx.rotate(5 * Math.PI / 180); 
-                ctx.drawImage(imgTraveler, -90, -90, 180, 180);
-                ctx.restore();
+                ctx.save(); ctx.translate(cardX + cardW - 80, cardY + cardH - 80); ctx.rotate(5 * Math.PI / 180); 
+                ctx.drawImage(imgTraveler, -90, -90, 180, 180); ctx.restore();
             }
             
-            // 底部小字
             ctx.textAlign = "center";
             ctx.fillStyle = "#d4a024"; ctx.font = "24px serif"; 
             ctx.fillText("✦ Genshin Impact Musical Record ✦", w/2, h - 50);
@@ -388,6 +486,7 @@
             ctx.closePath(); if (fill) ctx.fill(); if (stroke) ctx.stroke();
         }
 
+        // 分享與其他功能
         const shareBtn = document.getElementById('share-btn');
         const shareOverlay = document.getElementById('share-overlay');
         const qrDisplay = document.getElementById('qrcode-display');
@@ -396,10 +495,8 @@
             if (!text) return alert("請先寫點東西再分享喔！✦");
             if (window.location.protocol === 'file:') return alert("請將網頁上傳到伺服器才能使用分享功能喔！");
             const encodedText = encodeURIComponent(text);
-            // 傳遞字體大小參數
             const currentSize = fontSizeSlider.value;
             const shareUrl = `${window.location.origin}${window.location.pathname}?letter=${encodedText}&size=${currentSize}`;
-            
             qrDisplay.innerHTML = ""; 
             new QRCode(qrDisplay, { text: shareUrl, width: 250, height: 250, colorDark: "#4a3b3b", colorLight: "#f4f3ea" });
             shareOverlay.style.display = 'flex';
@@ -409,19 +506,15 @@
         window.addEventListener('load', () => {
             const params = new URLSearchParams(window.location.search);
             const letterContent = params.get('letter');
-            const sizeParam = params.get('size'); // 讀取分享過來的字體大小
-
+            const sizeParam = params.get('size');
             if (letterContent) {
                 const decodedText = decodeURIComponent(letterContent);
-                // 套用分享的字體大小
                 if(sizeParam) editor.style.fontSize = sizeParam + 'px';
-                
                 document.getElementById('main-ui').style.display = 'none';
                 document.getElementById('receiver-overlay').style.display = 'flex';
                 document.getElementById('open-letter-btn').addEventListener('click', async () => {
                     document.getElementById('receiver-overlay').style.display = 'none';
                     document.getElementById('main-ui').style.display = 'flex';
-                    // 隱藏編輯控制項，只留卡片
                     document.getElementById('controls-container').style.display = 'none';
                     editor.setAttribute('contenteditable', 'false');
                     while(true) { await startAutoPlay(decodedText, 'receiver_loop'); await sleep(2500); }
