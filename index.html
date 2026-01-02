@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>原神風格音律卡片</title>
+    <title>原神風格音律卡片 - 可調字體版</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -30,7 +30,7 @@
 
         #main-ui {
             display: flex; flex-direction: column; align-items: center;
-            gap: 30px; z-index: 10; width: 100%;
+            gap: 20px; z-index: 10; width: 100%;
         }
 
         /* === 原神風格卡片 === */
@@ -56,7 +56,7 @@
         #genshin-card::before { top: 10px; left: 10px; border-right: none; border-bottom: none; }
         #genshin-card::after { bottom: 10px; right: 10px; border-left: none; border-top: none; }
 
-        /* === 圖片樣式 (加上 ID 方便 Canvas 抓取) === */
+        /* === 圖片樣式 === */
         .chibi-char {
             position: absolute;
             width: 120px; height: auto;
@@ -69,7 +69,10 @@
 
         #editor {
             flex-grow: 1;
-            font-size: 26px; line-height: 1.7; color: var(--text-color);
+            /* 預設字體大小，會被 JS 覆蓋 */
+            font-size: 26px; 
+            line-height: 1.6; 
+            color: var(--text-color);
             outline: none; white-space: pre-wrap; overflow-y: auto;
             border: none; background: transparent; resize: none;
             text-align: left; 
@@ -79,7 +82,43 @@
         
         #editor::-webkit-scrollbar { width: 6px; }
         #editor::-webkit-scrollbar-thumb { background: var(--genshin-gold); border-radius: 10px; }
-        #editor:empty::before { content: "旅行者，在此寫下你的冒險詩篇..."; color: #a8978a; }
+        #editor:empty::before { content: "在此寫下你的冒險詩篇..."; color: #a8978a; }
+
+        /* === 控制區 (滑桿 + 按鈕) === */
+        #controls-container {
+            display: flex; flex-direction: column; align-items: center; gap: 15px;
+            width: 100%;
+        }
+
+        /* === 字體調整滑桿 === */
+        .slider-group {
+            display: flex; align-items: center; gap: 15px;
+            background: rgba(28, 37, 65, 0.8);
+            padding: 8px 20px; border-radius: 30px;
+            border: 1px solid var(--genshin-gold);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .slider-label { font-size: 14px; color: var(--genshin-gold-light); font-weight: bold; letter-spacing: 1px; }
+        
+        /* 自訂滑桿樣式 */
+        input[type=range] {
+            -webkit-appearance: none; width: 150px; height: 6px;
+            background: #2d3e5e; border-radius: 5px; outline: none;
+            border: 1px solid #5b77af;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--genshin-gold);
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+            border: 2px solid #fff;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--genshin-gold);
+            cursor: pointer; border: 2px solid #fff;
+        }
 
         /* === 按鈕區 === */
         #controls { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
@@ -136,10 +175,18 @@
             <div id="editor" contenteditable="true"></div>
         </div>
 
-        <div id="controls">
-            <button id="play-btn">▶ 聆聽</button>
-            <button id="record-btn" class="btn-record">🔴 錄製紀錄</button>
-            <button id="share-btn" class="btn-share">✦ 分享</button>
+        <div id="controls-container">
+            <div class="slider-group">
+                <span class="slider-label" style="font-size: 12px;">A-</span>
+                <input type="range" id="font-size-slider" min="16" max="50" value="26">
+                <span class="slider-label" style="font-size: 18px;">A+</span>
+            </div>
+
+            <div id="controls">
+                <button id="play-btn">▶ 聆聽</button>
+                <button id="record-btn" class="btn-record">🔴 錄製紀錄</button>
+                <button id="share-btn" class="btn-share">✦ 分享</button>
+            </div>
         </div>
     </div>
 
@@ -159,6 +206,7 @@
     <canvas id="postcard-canvas" width="1200" height="800"></canvas>
 
     <script>
+        // 音效
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext();
         const dest = audioCtx.createMediaStreamDestination();
@@ -194,7 +242,16 @@
             }
         }
 
+        // 字體控制邏輯
         const editor = document.getElementById('editor');
+        const fontSizeSlider = document.getElementById('font-size-slider');
+
+        // 監聽滑桿改變
+        fontSizeSlider.addEventListener('input', (e) => {
+            const newSize = e.target.value;
+            editor.style.fontSize = newSize + 'px';
+        });
+
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         let isPlaying = false;
         async function startAutoPlay(text, mode = 'preview') {
@@ -228,8 +285,10 @@
             if (!text) return alert("請先寫下你的冒險紀錄！✦");
             recordBtn.innerText = "準備錄製...";
             
-            // 呼叫更新後的繪圖函式 (會繪製圖片)
-            drawGenshinCard(text); 
+            // 抓取當前的字體大小傳給繪圖函式
+            const currentFontSize = parseInt(window.getComputedStyle(editor).fontSize);
+            
+            drawGenshinCard(text, currentFontSize); 
             
             const canvasStream = canvas.captureStream(0);
             const track = canvasStream.getVideoTracks()[0];
@@ -254,8 +313,8 @@
             recorder.stop();
         });
 
-        // 畫出原神風格卡片 (包含圖片)
-        function drawGenshinCard(text) {
+        // 畫出原神風格卡片 (支援動態字體大小)
+        function drawGenshinCard(text, uiFontSize) {
             const w = canvas.width, h = canvas.height;
             // 1. 背景
             const grad = ctx.createLinearGradient(0, 0, w, h);
@@ -273,36 +332,43 @@
             ctx.lineWidth = 5; ctx.strokeStyle = "#d4a024";
             roundRect(ctx, cardX, cardY, cardW, cardH, 30, false, true);
 
-            // 4. 文字 (左對齊)
-            ctx.fillStyle = "#4a3b3b"; ctx.font = "bold 40px 'Palatino Linotype', serif"; 
+            // 4. 文字 (左對齊，動態大小)
+            // Canvas 解析度較高，所以我們要把網頁上的字體大小放大一點點 (約 1.5 倍) 才會清晰
+            const canvasFontSize = uiFontSize * 1.5; 
+            const lineHeight = canvasFontSize * 1.6; // 行距
+
+            ctx.fillStyle = "#4a3b3b"; 
+            ctx.font = `bold ${canvasFontSize}px 'Palatino Linotype', serif`; 
             ctx.textAlign = "left"; ctx.textBaseline = "top";
+            
             const lines = text.split('\n');
             let y = cardY + 80;
             const startX = cardX + 80;
+            
+            // 計算每行最大字數 (大概估算，防止太寬)
+            const maxCharsPerLine = Math.floor((cardW - 160) / (canvasFontSize * 0.6));
+
             lines.forEach(line => {
-                let displayLine = line.length > 35 ? line.substring(0, 34) + "..." : line;
-                ctx.fillText(displayLine, startX, y); y += 70;
+                // 簡單截斷
+                let displayLine = line.length > maxCharsPerLine ? line.substring(0, maxCharsPerLine) + "..." : line;
+                ctx.fillText(displayLine, startX, y); 
+                y += lineHeight; // 動態行距
             });
 
-            // 5. 繪製圖片 (新增的部分)
+            // 5. 繪製圖片
             const imgPaimon = document.getElementById('img-paimon');
             const imgTraveler = document.getElementById('img-traveler');
-            
-            // 畫派蒙 (左下)
             if (imgPaimon && imgPaimon.complete) {
                 ctx.save();
-                ctx.translate(cardX + 80, cardY + cardH - 80); // 移動到位置
-                ctx.rotate(-5 * Math.PI / 180); // 旋轉 -5 度
-                // 圖片大小設為 180x180 (因為 Canvas 解析度較高，比 CSS 顯示的大一點)
+                ctx.translate(cardX + 80, cardY + cardH - 80); 
+                ctx.rotate(-5 * Math.PI / 180); 
                 ctx.drawImage(imgPaimon, -90, -90, 180, 180); 
                 ctx.restore();
             }
-
-            // 畫旅行者 (右下)
             if (imgTraveler && imgTraveler.complete) {
                 ctx.save();
-                ctx.translate(cardX + cardW - 80, cardY + cardH - 80); // 移動到位置
-                ctx.rotate(5 * Math.PI / 180); // 旋轉 5 度
+                ctx.translate(cardX + cardW - 80, cardY + cardH - 80); 
+                ctx.rotate(5 * Math.PI / 180); 
                 ctx.drawImage(imgTraveler, -90, -90, 180, 180);
                 ctx.restore();
             }
@@ -330,23 +396,33 @@
             if (!text) return alert("請先寫點東西再分享喔！✦");
             if (window.location.protocol === 'file:') return alert("請將網頁上傳到伺服器才能使用分享功能喔！");
             const encodedText = encodeURIComponent(text);
-            const shareUrl = `${window.location.origin}${window.location.pathname}?letter=${encodedText}`;
+            // 傳遞字體大小參數
+            const currentSize = fontSizeSlider.value;
+            const shareUrl = `${window.location.origin}${window.location.pathname}?letter=${encodedText}&size=${currentSize}`;
+            
             qrDisplay.innerHTML = ""; 
             new QRCode(qrDisplay, { text: shareUrl, width: 250, height: 250, colorDark: "#4a3b3b", colorLight: "#f4f3ea" });
             shareOverlay.style.display = 'flex';
         });
         function closeOverlay(id) { document.getElementById(id).style.display = 'none'; }
+        
         window.addEventListener('load', () => {
             const params = new URLSearchParams(window.location.search);
             const letterContent = params.get('letter');
+            const sizeParam = params.get('size'); // 讀取分享過來的字體大小
+
             if (letterContent) {
                 const decodedText = decodeURIComponent(letterContent);
+                // 套用分享的字體大小
+                if(sizeParam) editor.style.fontSize = sizeParam + 'px';
+                
                 document.getElementById('main-ui').style.display = 'none';
                 document.getElementById('receiver-overlay').style.display = 'flex';
                 document.getElementById('open-letter-btn').addEventListener('click', async () => {
                     document.getElementById('receiver-overlay').style.display = 'none';
                     document.getElementById('main-ui').style.display = 'flex';
-                    document.getElementById('controls').style.display = 'none';
+                    // 隱藏編輯控制項，只留卡片
+                    document.getElementById('controls-container').style.display = 'none';
                     editor.setAttribute('contenteditable', 'false');
                     while(true) { await startAutoPlay(decodedText, 'receiver_loop'); await sleep(2500); }
                 });
@@ -364,4 +440,3 @@
     </script>
 </body>
 </html>
-
