@@ -9,17 +9,16 @@
     <style>
         :root {
             /* 原神 UI 配色盤 */
-            --genshin-bg: #1c2541;       /* 深夜藍背景 */
-            --genshin-card-bg: #f4f3ea;  /* 奶油白卡片紙 */
-            --genshin-gold: #d4a024;     /* 華麗金色邊框 */
-            --genshin-gold-light: #f8d768; /* 亮金色 */
-            --genshin-blue-accent: #395385; /* UI 深藍裝飾 */
-            --text-color: #4a3b3b;       /* 深棕色文字 */
+            --genshin-bg: #1c2541;       
+            --genshin-card-bg: #f4f3ea;  
+            --genshin-gold: #d4a024;     
+            --genshin-gold-light: #f8d768; 
+            --genshin-blue-accent: #395385; 
+            --text-color: #4a3b3b;       
             --shadow-color: rgba(0, 0, 0, 0.5);
         }
         body {
             background-color: var(--genshin-bg);
-            /* 背景加入星空紋理 */
             background-image: 
                 radial-gradient(circle at 20% 30%, #2a3d66 0%, transparent 50%),
                 radial-gradient(circle at 80% 70%, #395385 0%, transparent 50%);
@@ -43,7 +42,6 @@
             outline: 6px solid var(--genshin-blue-accent);
             border-radius: 20px;
             box-shadow: 0 25px 50px var(--shadow-color), inset 0 0 30px rgba(212, 160, 36, 0.2);
-            /* 修改這裡：增加內距，以免文字貼邊 */
             padding: 40px 50px; 
             box-sizing: border-box;
             position: relative;
@@ -51,7 +49,6 @@
             overflow: hidden;
         }
 
-        /* 角落裝飾紋理 */
         #genshin-card::before, #genshin-card::after {
             content: ''; position: absolute; width: 60px; height: 60px;
             border: 4px solid var(--genshin-gold); opacity: 0.6; pointer-events: none;
@@ -59,15 +56,13 @@
         #genshin-card::before { top: 10px; left: 10px; border-right: none; border-bottom: none; }
         #genshin-card::after { bottom: 10px; right: 10px; border-left: none; border-top: none; }
 
-        /* === 圖片樣式 === */
+        /* === 圖片樣式 (加上 ID 方便 Canvas 抓取) === */
         .chibi-char {
             position: absolute;
             width: 120px; height: auto;
             z-index: 5; opacity: 0.9;
             pointer-events: none;
             filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
-            /* 如果圖片讀取失敗，顯示替代文字樣式 */
-            font-size: 12px; color: #aaa; border: 1px dashed #ccc; padding: 5px; background: rgba(255,255,255,0.8);
         }
         .char-left { bottom: 15px; left: 15px; transform: rotate(-5deg); }
         .char-right { bottom: 15px; right: 15px; transform: rotate(5deg); }
@@ -77,8 +72,6 @@
             font-size: 26px; line-height: 1.7; color: var(--text-color);
             outline: none; white-space: pre-wrap; overflow-y: auto;
             border: none; background: transparent; resize: none;
-            
-            /* --- 修改重點：文字靠左 --- */
             text-align: left; 
             z-index: 10; position: relative;
             font-weight: bold;
@@ -86,7 +79,7 @@
         
         #editor::-webkit-scrollbar { width: 6px; }
         #editor::-webkit-scrollbar-thumb { background: var(--genshin-gold); border-radius: 10px; }
-        #editor:empty::before { content: "旅行者，在此寫下你的冒險詩篇..."; color: #a8978a; }
+        #editor:empty::before { content: "旅行者，\n在此寫下你的冒險詩篇..."; color: #a8978a; }
 
         /* === 按鈕區 === */
         #controls { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
@@ -137,8 +130,8 @@
 
     <div id="main-ui">
         <div id="genshin-card">
-            <img src="paimon.png" class="chibi-char char-left" alt="請放入 paimon.png">
-            <img src="traveler.png" class="chibi-char char-right" alt="請放入 traveler.png">
+            <img src="paimon.png" id="img-paimon" class="chibi-char char-left" alt="paimon">
+            <img src="traveler.png" id="img-traveler" class="chibi-char char-right" alt="traveler">
 
             <div id="editor" contenteditable="true"></div>
         </div>
@@ -166,11 +159,11 @@
     <canvas id="postcard-canvas" width="1200" height="800"></canvas>
 
     <script>
-        // 音效與特效
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext();
         const dest = audioCtx.createMediaStreamDestination();
         const notes = [196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
+        
         function playSound(char) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -183,6 +176,7 @@
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0);
             osc.start(); osc.stop(audioCtx.currentTime + 1.0);
         }
+        
         function triggerEffect(char) {
             playSound(char);
             if (this.lastFire && Date.now() - this.lastFire < 80) return;
@@ -200,7 +194,6 @@
             }
         }
 
-        // 自動演奏
         const editor = document.getElementById('editor');
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         let isPlaying = false;
@@ -227,7 +220,6 @@
             }
         }
 
-        // 錄影繪圖 (修正為左對齊)
         const canvas = document.getElementById('postcard-canvas');
         const ctx = canvas.getContext('2d');
         const recordBtn = document.getElementById('record-btn');
@@ -235,8 +227,10 @@
             const text = editor.innerText.trim();
             if (!text) return alert("請先寫下你的冒險紀錄！✦");
             recordBtn.innerText = "準備錄製...";
-            // 注意：這裡只會繪製文字與卡片，圖片因為跨域或安全問題可能不會錄進去
+            
+            // 呼叫更新後的繪圖函式 (會繪製圖片)
             drawGenshinCard(text); 
+            
             const canvasStream = canvas.captureStream(0);
             const track = canvasStream.getVideoTracks()[0];
             const refresher = setInterval(() => { if(track.requestFrame) track.requestFrame(); }, 500);
@@ -260,42 +254,65 @@
             recorder.stop();
         });
 
+        // 畫出原神風格卡片 (包含圖片)
         function drawGenshinCard(text) {
             const w = canvas.width, h = canvas.height;
-            // 背景
+            // 1. 背景
             const grad = ctx.createLinearGradient(0, 0, w, h);
             grad.addColorStop(0, "#1c2541"); grad.addColorStop(1, "#2a3d66");
             ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
-            // 卡片
+            
+            // 2. 卡片本體
             const cardX = 100, cardY = 80, cardW = w-200, cardH = h-160;
             ctx.fillStyle = "#f4f3ea";
             roundRect(ctx, cardX, cardY, cardW, cardH, 30, true, false);
-            // 邊框
+            
+            // 3. 邊框
             ctx.lineWidth = 8; ctx.strokeStyle = "#395385"; 
             roundRect(ctx, cardX-4, cardY-4, cardW+8, cardH+8, 34, false, true);
             ctx.lineWidth = 5; ctx.strokeStyle = "#d4a024";
             roundRect(ctx, cardX, cardY, cardW, cardH, 30, false, true);
-            
-            // 文字內容 (修正為左對齊)
+
+            // 4. 文字 (左對齊)
             ctx.fillStyle = "#4a3b3b"; ctx.font = "bold 40px 'Palatino Linotype', serif"; 
-            ctx.textAlign = "left"; ctx.textBaseline = "top"; // 改為 Top Left
-            
+            ctx.textAlign = "left"; ctx.textBaseline = "top";
             const lines = text.split('\n');
-            let y = cardY + 80; // 從卡片上方開始
-            const startX = cardX + 80; // 左邊界
-            
+            let y = cardY + 80;
+            const startX = cardX + 80;
             lines.forEach(line => {
-                // 簡單的文字截斷，防止超出右邊界
                 let displayLine = line.length > 35 ? line.substring(0, 34) + "..." : line;
-                ctx.fillText(displayLine, startX, y); 
-                y += 70;
+                ctx.fillText(displayLine, startX, y); y += 70;
             });
+
+            // 5. 繪製圖片 (新增的部分)
+            const imgPaimon = document.getElementById('img-paimon');
+            const imgTraveler = document.getElementById('img-traveler');
+            
+            // 畫派蒙 (左下)
+            if (imgPaimon && imgPaimon.complete) {
+                ctx.save();
+                ctx.translate(cardX + 80, cardY + cardH - 80); // 移動到位置
+                ctx.rotate(-5 * Math.PI / 180); // 旋轉 -5 度
+                // 圖片大小設為 180x180 (因為 Canvas 解析度較高，比 CSS 顯示的大一點)
+                ctx.drawImage(imgPaimon, -90, -90, 180, 180); 
+                ctx.restore();
+            }
+
+            // 畫旅行者 (右下)
+            if (imgTraveler && imgTraveler.complete) {
+                ctx.save();
+                ctx.translate(cardX + cardW - 80, cardY + cardH - 80); // 移動到位置
+                ctx.rotate(5 * Math.PI / 180); // 旋轉 5 度
+                ctx.drawImage(imgTraveler, -90, -90, 180, 180);
+                ctx.restore();
+            }
             
             // 底部小字
             ctx.textAlign = "center";
             ctx.fillStyle = "#d4a024"; ctx.font = "24px serif"; 
             ctx.fillText("✦ Genshin Impact Musical Record ✦", w/2, h - 50);
         }
+
         function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
             ctx.beginPath(); ctx.moveTo(x + radius, y);
             ctx.lineTo(x + width - radius, y); ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
@@ -305,7 +322,6 @@
             ctx.closePath(); if (fill) ctx.fill(); if (stroke) ctx.stroke();
         }
 
-        // 分享與接收
         const shareBtn = document.getElementById('share-btn');
         const shareOverlay = document.getElementById('share-overlay');
         const qrDisplay = document.getElementById('qrcode-display');
